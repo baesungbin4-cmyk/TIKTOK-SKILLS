@@ -34,6 +34,7 @@ RUN pip install --no-cache-dir /tmp/wheels/*.whl && rm -rf /tmp/wheels
 # Copy application code
 COPY agent ./agent
 COPY api ./api
+COPY assets ./assets
 COPY skills ./skills
 
 # Set ownership to non-root user

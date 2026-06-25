@@ -6,7 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from skills.report_gen import ReportGenSkill, ReportInput
-from skills.tiktok_fetch import FetchInput, TikTokFetchSkill
+from skills.tiktok_fetch import FetchInput, ProviderName, TikTokFetchSkill
 from skills.trend_analysis import TrendAnalysisInput, TrendAnalysisSkill
 from skills.user_analysis import UserAnalysisInput, UserAnalysisSkill
 
@@ -17,6 +17,7 @@ class AgentRequest(BaseModel):
     target_id: str = "demo"
     date_range: tuple[date, date] | None = None
     limit: int = Field(default=50, ge=1, le=200)
+    provider: ProviderName = "mock"
 
 
 class AgentResponse(BaseModel):
@@ -55,6 +56,7 @@ class TikTokAgent:
                 target_id=request.target_id,
                 date_range=(start, end),
                 limit=request.limit,
+                provider=request.provider,
             )
         )
 

@@ -10,6 +10,7 @@ Use this skill to work on the TikTok Data Analysis Agent in this repository.
 ## Project Map
 
 - `skills/`: Python skill modules and Pydantic input/output contracts.
+- `assets/sample_tiktok_records.json`: Local fixture dataset for repeatable analysis runs.
 - `agent/planner.py`: Orchestrates fetch, analysis, and report steps.
 - `api/main.py`: FastAPI app exposing `/healthz`, `/skills`, `/analyze`, and optional `/metrics`.
 - `docker/` and `docker-compose.yml`: Nginx, Prometheus, and Grafana deployment stack.
@@ -17,9 +18,10 @@ Use this skill to work on the TikTok Data Analysis Agent in this repository.
 
 ## Operating Rules
 
-- Keep the live-data boundary explicit: current TikTok records are deterministic mock data, not real TikTok OpenAPI responses.
+- Keep the live-data boundary explicit: current TikTok records are deterministic mock or local fixture data, not real TikTok OpenAPI responses.
 - Preserve response fields that prevent misuse: `source`, `is_live_data`, `warnings`, and `trace_id`.
 - Keep each module contract typed with Pydantic models before wiring it into the planner or API.
+- Prefer adding new data providers behind the `tiktok_fetch` provider boundary instead of mixing provider-specific code into analysis modules.
 - Update `/skills` schema output when adding or changing a callable skill.
 - Avoid committing local secrets, `.env`, Docker CLI state, caches, or Baidu upload sidecar files.
 

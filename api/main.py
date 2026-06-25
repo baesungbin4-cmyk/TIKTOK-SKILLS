@@ -11,6 +11,7 @@ from fastapi import FastAPI, Request
 from pydantic import BaseModel, Field
 
 from agent.planner import AgentResponse, TikTokAgent
+from skills.tiktok_fetch import ProviderName
 
 try:
     from prometheus_fastapi_instrumentator import Instrumentator, metrics
@@ -126,6 +127,7 @@ class AnalyzeRequest(BaseModel):
     target_id: str = "demo"
     date_range: tuple[date, date] | None = None
     limit: int = Field(default=50, ge=1, le=200)
+    provider: ProviderName = "mock"
 
 
 # ============================================================
@@ -138,6 +140,7 @@ async def healthz() -> dict[str, Any]:
         "status": "ok",
         "service": "tiktok-data-analysis-agent",
         "data_source": "mock",
+        "supported_providers": ["mock", "fixture"],
         "is_live_tiktok_api_configured": False,
         "metrics_enabled": metrics_enabled,
     }
@@ -156,6 +159,7 @@ async def analyze(request: AnalyzeRequest) -> AgentResponse:
             "query": request.query,
             "target_type": request.target_type,
             "target_id": request.target_id,
+            "provider": request.provider,
         },
     )
     return await agent.run(
@@ -164,4 +168,5 @@ async def analyze(request: AnalyzeRequest) -> AgentResponse:
         target_id=request.target_id,
         date_range=request.date_range,
         limit=request.limit,
+        provider=request.provider,
     )

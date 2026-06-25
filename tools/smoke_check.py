@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+from datetime import date
 from pathlib import Path
 
 
@@ -23,6 +24,10 @@ async def check_runtime_contract() -> None:
     assert_true(health["status"] == "ok", "healthz status is not ok")
     assert_true(health["data_source"] == "mock", "data source must be explicit")
     assert_true(
+        health["supported_providers"] == ["mock", "fixture"],
+        "supported providers are not exposed",
+    )
+    assert_true(
         health["is_live_tiktok_api_configured"] is False,
         "live TikTok API state must be explicit",
     )
@@ -32,6 +37,11 @@ async def check_runtime_contract() -> None:
     assert_true(
         skill_names == {"tiktok_fetch", "trend_analysis", "user_analysis", "report_gen"},
         f"unexpected skill registry: {sorted(skill_names)}",
+    )
+    fetch_schema = next(item for item in skill_payload["skills"] if item["name"] == "tiktok_fetch")
+    assert_true(
+        "provider" in fetch_schema["parameters"]["properties"],
+        "fetch schema is missing provider",
     )
 
     agent = TikTokAgent()
@@ -57,6 +67,20 @@ async def check_runtime_contract() -> None:
         f"unexpected trend execution steps: {trend_response.steps}",
     )
 
+    fixture_response = await agent.run(
+        "trending hashtags",
+        target_type="hashtag",
+        target_id="demo",
+        provider="fixture",
+        date_range=(date(2026, 6, 19), date(2026, 6, 23)),
+        limit=5,
+    )
+    assert_true(fixture_response.source == "fixture", "fixture provider was not used")
+    assert_true(
+        fixture_response.result["summary"]["record_count"] == 5.0,
+        "fixture analysis should use five sample records",
+    )
+
 
 def check_static_delivery_files() -> None:
     dashboard_path = ROOT / "docker" / "grafana" / "dashboards" / "fastapi-overview.json"
@@ -75,6 +99,12 @@ def check_static_delivery_files() -> None:
         "Grafana should bind to localhost only",
     )
     assert_true('"9090:9090"' not in compose, "Prometheus should not be public")
+
+    dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
+    assert_true("COPY assets ./assets" in dockerfile, "Docker image must include fixtures")
+
+    dockerignore = (ROOT / ".dockerignore").read_text(encoding="utf-8")
+    assert_true("\ndocker/\n" not in dockerignore, ".dockerignore must not exclude compose images")
 
     prometheus = (ROOT / "docker" / "prometheus" / "prom-config.yml").read_text(
         encoding="utf-8"

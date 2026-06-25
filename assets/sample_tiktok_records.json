@@ -1,0 +1,92 @@
+{
+  "records": [
+    {
+      "id": "hashtag_demo_2026-06-19",
+      "target_type": "hashtag",
+      "target_id": "demo",
+      "collected_date": "2026-06-19",
+      "views": 11800,
+      "likes": 1020,
+      "comments": 96,
+      "shares": 64,
+      "collected_at": "2026-06-19T08:00:00+00:00"
+    },
+    {
+      "id": "hashtag_demo_2026-06-20",
+      "target_type": "hashtag",
+      "target_id": "demo",
+      "collected_date": "2026-06-20",
+      "views": 13250,
+      "likes": 1190,
+      "comments": 110,
+      "shares": 70,
+      "collected_at": "2026-06-20T08:00:00+00:00"
+    },
+    {
+      "id": "hashtag_demo_2026-06-21",
+      "target_type": "hashtag",
+      "target_id": "demo",
+      "collected_date": "2026-06-21",
+      "views": 14640,
+      "likes": 1305,
+      "comments": 128,
+      "shares": 82,
+      "collected_at": "2026-06-21T08:00:00+00:00"
+    },
+    {
+      "id": "hashtag_demo_2026-06-22",
+      "target_type": "hashtag",
+      "target_id": "demo",
+      "collected_date": "2026-06-22",
+      "views": 15820,
+      "likes": 1470,
+      "comments": 145,
+      "shares": 94,
+      "collected_at": "2026-06-22T08:00:00+00:00"
+    },
+    {
+      "id": "hashtag_demo_2026-06-23",
+      "target_type": "hashtag",
+      "target_id": "demo",
+      "collected_date": "2026-06-23",
+      "views": 18150,
+      "likes": 1695,
+      "comments": 180,
+      "shares": 116,
+      "collected_at": "2026-06-23T08:00:00+00:00"
+    },
+    {
+      "id": "account_demo_2026-06-19",
+      "target_type": "account",
+      "target_id": "demo",
+      "collected_date": "2026-06-19",
+      "views": 9400,
+      "likes": 820,
+      "comments": 75,
+      "shares": 38,
+      "collected_at": "2026-06-19T09:00:00+00:00"
+    },
+    {
+      "id": "account_demo_2026-06-20",
+      "target_type": "account",
+      "target_id": "demo",
+      "collected_date": "2026-06-20",
+      "views": 10120,
+      "likes": 910,
+      "comments": 92,
+      "shares": 46,
+      "collected_at": "2026-06-20T09:00:00+00:00"
+    },
+    {
+      "id": "account_demo_2026-06-21",
+      "target_type": "account",
+      "target_id": "demo",
+      "collected_date": "2026-06-21",
+      "views": 11240,
+      "likes": 980,
+      "comments": 105,
+      "shares": 58,
+      "collected_at": "2026-06-21T09:00:00+00:00"
+    }
+  ]
+}

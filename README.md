@@ -4,11 +4,11 @@ FastAPI-based TikTok data analysis agent prototype with modular skills, typed Py
 
 ## Delivery Status
 
-This project is deliverable as a deployable mock-data analysis agent. It does not connect to TikTok OpenAPI yet. The runtime response explicitly returns `source="mock"`, `is_live_data=false`, and warnings so downstream users cannot mistake demo data for live TikTok data.
+This project is deliverable as a deployable local-data analysis agent. It does not connect to TikTok OpenAPI yet. The runtime response explicitly returns `source`, `is_live_data=false`, and warnings where appropriate so downstream users cannot mistake demo or fixture data for live TikTok data.
 
 Implemented skills:
 
-- `tiktok_fetch`: returns normalized deterministic mock records.
+- `tiktok_fetch`: returns normalized deterministic mock records or local JSON fixture records.
 - `trend_analysis`: computes engagement, growth, series, and insights.
 - `user_analysis`: computes account health metrics and recommendations.
 - `report_gen`: creates an inline structured report and chart specs.
@@ -38,6 +38,20 @@ curl -X POST http://127.0.0.1:8000/analyze \
   -d '{"query":"分析账号表现","target_type":"account","target_id":"demo","limit":5}'
 ```
 
+Use the local fixture provider for a repeatable sample-data run:
+
+```bash
+curl -X POST http://127.0.0.1:8000/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"query":"trending hashtags","target_type":"hashtag","target_id":"demo","provider":"fixture","date_range":["2026-06-19","2026-06-23"],"limit":5}'
+```
+
+Provider behavior:
+
+- `mock`: generates deterministic records in code for fast smoke testing.
+- `fixture`: reads `assets/sample_tiktok_records.json`, filters by target/date, and supports cursor pagination.
+- `live`: not implemented; add authentication, provider contracts, rate limits, retry policy, and compliance checks before enabling it.
+
 ## Docker Deployment
 
 ```bash
@@ -64,4 +78,4 @@ ssh -L 3000:localhost:3000 user@server
 
 ## Production Gaps
 
-To deliver live TikTok analytics, replace the mock provider in `skills/tiktok_fetch.py` with a compliant TikTok OpenAPI or licensed data provider integration. Add API authentication, rate limits per tenant, persistent task storage, and report file storage before exposing this to untrusted users.
+To deliver live TikTok analytics, add a compliant TikTok OpenAPI or licensed data provider integration behind the existing provider boundary. Add API authentication, rate limits per tenant, persistent task storage, and report file storage before exposing this to untrusted users.
