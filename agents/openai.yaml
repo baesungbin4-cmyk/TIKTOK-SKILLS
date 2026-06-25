@@ -1,0 +1,4 @@
+interface:
+  display_name: "TikTok Skills"
+  short_description: "Build and maintain a TikTok analytics agent."
+  default_prompt: "Use $tiktok-skills to add or validate a TikTok analytics agent workflow."
