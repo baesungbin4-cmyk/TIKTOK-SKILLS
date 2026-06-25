@@ -12,6 +12,7 @@ Implemented skills:
 - `anomaly_detection`: detects abnormal spikes using median/MAD robust z-score and period-over-period growth thresholds.
 - `trend_analysis`: computes engagement, growth, series, and insights.
 - `user_analysis`: computes account health metrics and recommendations.
+- `insight_gen`: converts structured analysis outputs into narrative insight, evidence, risk flags, actions, and an LLM-ready prompt.
 - `report_gen`: creates an inline structured report and chart specs.
 
 ## Local Validation
@@ -68,6 +69,14 @@ Anomaly detection uses robust statistics instead of a simple average threshold:
 - detection reasons: robust z-score breach and/or period-over-period growth spike.
 - severity: medium/high/critical based on z-score and growth magnitude.
 
+The agent also runs `insight_gen` after each analysis step. This keeps the runtime usable without an external LLM while producing a prompt that can be handed to an LLM provider later:
+
+- narrative: concise business interpretation of the metric result.
+- evidence: metric/value/interpretation tuples for auditability.
+- risk flags: explicit caveats and abnormal conditions.
+- recommended actions: operator-facing next steps.
+- `llm_prompt`: a provider-agnostic prompt payload that preserves `source` and `is_live_data`.
+
 ## Docker Deployment
 
 ```bash
@@ -94,4 +103,4 @@ ssh -L 3000:localhost:3000 user@server
 
 ## Production Gaps
 
-To deliver live TikTok analytics, add a compliant TikTok OpenAPI or licensed data provider integration behind the existing provider boundary. Add API authentication, rate limits per tenant, persistent task storage, and report file storage before exposing this to untrusted users.
+To deliver live TikTok analytics, add a compliant TikTok OpenAPI or licensed data provider integration behind the existing provider boundary. Add OAuth2/API-key authentication, rate limits, exponential backoff, persistent task storage, and report file storage before exposing this to untrusted users. If LLM-generated strategy text is enabled, keep `source`, `is_live_data`, and evidence fields in the prompt to avoid overstating data provenance.

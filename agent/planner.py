@@ -6,6 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from skills.anomaly_detection import AnomalyDetectionInput, AnomalyDetectionSkill
+from skills.insight_gen import InsightGenInput, InsightGenSkill
 from skills.report_gen import ReportGenSkill, ReportInput
 from skills.tiktok_fetch import FetchInput, ProviderName, TikTokFetchSkill
 from skills.trend_analysis import TrendAnalysisInput, TrendAnalysisSkill
@@ -29,6 +30,7 @@ class AgentResponse(BaseModel):
     intent: str
     dataset_id: str
     result: dict[str, Any]
+    insight: dict[str, Any]
     report: dict[str, Any]
     steps: list[str]
     source: str
@@ -41,12 +43,14 @@ class TikTokAgent:
     def __init__(self) -> None:
         self.fetch_skill = TikTokFetchSkill()
         self.anomaly_skill = AnomalyDetectionSkill()
+        self.insight_skill = InsightGenSkill()
         self.trend_skill = TrendAnalysisSkill()
         self.user_skill = UserAnalysisSkill()
         self.report_skill = ReportGenSkill()
         self.skills = {
             self.fetch_skill.name: self.fetch_skill,
             self.anomaly_skill.name: self.anomaly_skill,
+            self.insight_skill.name: self.insight_skill,
             self.trend_skill.name: self.trend_skill,
             self.user_skill.name: self.user_skill,
             self.report_skill.name: self.report_skill,
@@ -95,12 +99,24 @@ class TikTokAgent:
             *fetch_result.warnings,
             *analysis_payload.get("warnings", []),
         ]
+        insight = await self.insight_skill.run(
+            InsightGenInput(
+                dataset_id=fetch_result.dataset_id,
+                intent=intent,
+                analysis_result=analysis_payload,
+                source=fetch_result.source,
+                is_live_data=fetch_result.is_live_data,
+                warnings=warnings,
+            )
+        )
+        warnings = [*warnings, *insight.warnings]
         report = await self.report_skill.run(
             ReportInput(
                 analysis_id=analysis_payload["analysis_id"],
                 dataset_id=fetch_result.dataset_id,
                 intent=intent,
                 analysis_result=analysis_payload,
+                insight=insight.model_dump(),
                 source=fetch_result.source,
                 is_live_data=fetch_result.is_live_data,
                 warnings=warnings,
@@ -111,8 +127,14 @@ class TikTokAgent:
             intent=intent,
             dataset_id=fetch_result.dataset_id,
             result=analysis_payload,
+            insight=insight.model_dump(),
             report=report.model_dump(),
-            steps=[self.fetch_skill.name, intent, self.report_skill.name],
+            steps=[
+                self.fetch_skill.name,
+                intent,
+                self.insight_skill.name,
+                self.report_skill.name,
+            ],
             source=fetch_result.source,
             is_live_data=fetch_result.is_live_data,
             warnings=report.warnings,
@@ -164,6 +186,11 @@ class TikTokAgent:
                 self.anomaly_skill.name,
                 self.anomaly_skill.description,
                 AnomalyDetectionInput,
+            ),
+            self._schema_for(
+                self.insight_skill.name,
+                self.insight_skill.description,
+                InsightGenInput,
             ),
             self._schema_for(
                 self.trend_skill.name,

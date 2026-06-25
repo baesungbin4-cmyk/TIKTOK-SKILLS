@@ -6,6 +6,12 @@ from skills.anomaly_detection import (
     AnomalyDetectionSkill,
     AnomalyPoint,
 )
+from skills.insight_gen import (
+    InsightEvidence,
+    InsightGenInput,
+    InsightGenOutput,
+    InsightGenSkill,
+)
 from skills.report_gen import ReportGenSkill, ReportInput, ReportOutput
 from skills.tiktok_fetch import FetchInput, FetchOutput, TikTokFetchSkill, TikTokRecord
 from skills.trend_analysis import TrendAnalysisInput, TrendAnalysisOutput, TrendAnalysisSkill
@@ -18,6 +24,10 @@ __all__ = [
     "AnomalyPoint",
     "FetchInput",
     "FetchOutput",
+    "InsightEvidence",
+    "InsightGenInput",
+    "InsightGenOutput",
+    "InsightGenSkill",
     "ReportGenSkill",
     "ReportInput",
     "ReportOutput",

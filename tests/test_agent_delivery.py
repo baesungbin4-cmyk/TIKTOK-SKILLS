@@ -6,6 +6,7 @@ import unittest
 from agent.planner import TikTokAgent
 from api.main import healthz, skills
 from skills.anomaly_detection import AnomalyDetectionInput, AnomalyDetectionSkill
+from skills.insight_gen import InsightGenInput, InsightGenSkill
 from skills.tiktok_fetch import FetchInput, TikTokFetchSkill
 
 
@@ -28,6 +29,7 @@ class AgentDeliveryTest(unittest.IsolatedAsyncioTestCase):
             {
                 "tiktok_fetch",
                 "anomaly_detection",
+                "insight_gen",
                 "trend_analysis",
                 "user_analysis",
                 "report_gen",
@@ -48,11 +50,15 @@ class AgentDeliveryTest(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(response.intent, "user_analysis")
-        self.assertEqual(response.steps, ["tiktok_fetch", "user_analysis", "report_gen"])
+        self.assertEqual(
+            response.steps,
+            ["tiktok_fetch", "user_analysis", "insight_gen", "report_gen"],
+        )
         self.assertEqual(response.source, "mock")
         self.assertFalse(response.is_live_data)
         self.assertIn("mock", " ".join(response.warnings).lower())
         self.assertIn("summary", response.report)
+        self.assertIn("narrative", response.insight)
 
     async def test_trend_query_runs_fetch_analysis_and_report(self) -> None:
         response = await TikTokAgent().run(
@@ -63,7 +69,10 @@ class AgentDeliveryTest(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(response.intent, "trend_analysis")
-        self.assertEqual(response.steps, ["tiktok_fetch", "trend_analysis", "report_gen"])
+        self.assertEqual(
+            response.steps,
+            ["tiktok_fetch", "trend_analysis", "insight_gen", "report_gen"],
+        )
         self.assertGreater(response.result["summary"]["growth"], 0)
         self.assertEqual(response.report["source"], "mock")
 
@@ -109,6 +118,7 @@ class AgentDeliveryTest(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(response.is_live_data)
         self.assertEqual(response.result["summary"]["record_count"], 6.0)
         self.assertGreater(response.result["summary"]["growth"], 0)
+        self.assertIn("evidence", response.insight)
 
     async def test_anomaly_skill_detects_fixture_spike(self) -> None:
         fetch = await TikTokFetchSkill().run(
@@ -145,10 +155,43 @@ class AgentDeliveryTest(unittest.IsolatedAsyncioTestCase):
         )
 
         self.assertEqual(response.intent, "anomaly_detection")
-        self.assertEqual(response.steps, ["tiktok_fetch", "anomaly_detection", "report_gen"])
+        self.assertEqual(
+            response.steps,
+            ["tiktok_fetch", "anomaly_detection", "insight_gen", "report_gen"],
+        )
         self.assertEqual(response.result["severity"], "critical")
         self.assertGreaterEqual(response.result["anomaly_count"], 1)
-        self.assertIn("Anomaly detection found", response.report["summary"])
+        self.assertIn("abnormal views", response.insight["narrative"])
+        self.assertIn("TikTok analytics strategist", response.insight["llm_prompt"])
+        self.assertIn("abnormal views", response.report["summary"])
+
+    async def test_insight_skill_turns_analysis_into_actions(self) -> None:
+        result = await InsightGenSkill().run(
+            InsightGenInput(
+                dataset_id="fixture_hashtag_demo",
+                intent="anomaly_detection",
+                analysis_result={
+                    "metric": "views",
+                    "severity": "high",
+                    "anomaly_count": 1,
+                    "baseline": 15000.0,
+                    "mad": 1200.0,
+                    "anomalies": [
+                        {
+                            "record_id": "hashtag_demo_2026-06-23",
+                            "collected_date": "2026-06-23",
+                        }
+                    ],
+                },
+                source="fixture",
+                is_live_data=False,
+            )
+        )
+
+        self.assertGreaterEqual(result.confidence, 0.7)
+        self.assertTrue(result.evidence)
+        self.assertTrue(result.recommended_actions)
+        self.assertIn("is_live_data", result.llm_prompt)
 
 
 if __name__ == "__main__":

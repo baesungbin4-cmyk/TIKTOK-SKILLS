@@ -39,6 +39,7 @@ async def check_runtime_contract() -> None:
         == {
             "tiktok_fetch",
             "anomaly_detection",
+            "insight_gen",
             "trend_analysis",
             "user_analysis",
             "report_gen",
@@ -70,9 +71,10 @@ async def check_runtime_contract() -> None:
     )
     assert_true(trend_response.intent == "trend_analysis", "trend query routed incorrectly")
     assert_true(
-        trend_response.steps == ["tiktok_fetch", "trend_analysis", "report_gen"],
+        trend_response.steps == ["tiktok_fetch", "trend_analysis", "insight_gen", "report_gen"],
         f"unexpected trend execution steps: {trend_response.steps}",
     )
+    assert_true("narrative" in trend_response.insight, "trend insight is missing")
 
     fixture_response = await agent.run(
         "trending hashtags",
@@ -104,6 +106,10 @@ async def check_runtime_contract() -> None:
     assert_true(
         anomaly_response.result["anomaly_count"] >= 1,
         "fixture spike should be detected",
+    )
+    assert_true(
+        "llm_prompt" in anomaly_response.insight,
+        "anomaly insight should expose an LLM-ready prompt",
     )
 
 

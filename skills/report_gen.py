@@ -11,6 +11,7 @@ class ReportInput(BaseModel):
     dataset_id: str
     intent: Literal["trend_analysis", "user_analysis", "anomaly_detection"]
     analysis_result: dict[str, Any]
+    insight: dict[str, Any] | None = None
     source: str
     is_live_data: bool
     warnings: list[str] = Field(default_factory=list)
@@ -37,18 +38,26 @@ class ReportGenSkill:
     )
 
     async def run(self, inp: ReportInput) -> ReportOutput:
-        if inp.intent == "user_analysis":
+        insight = inp.insight or {}
+        if insight:
+            summary = str(insight.get("narrative", ""))
+            recommendations = list(insight.get("recommended_actions", []))
+        elif inp.intent == "user_analysis":
             summary = self._user_summary(inp.analysis_result)
-            charts = self._user_charts(inp.analysis_result)
             recommendations = list(inp.analysis_result.get("recommendations", []))
         elif inp.intent == "anomaly_detection":
             summary = self._anomaly_summary(inp.analysis_result)
-            charts = self._anomaly_charts(inp.analysis_result)
             recommendations = self._anomaly_recommendations(inp.analysis_result)
         else:
             summary = self._trend_summary(inp.analysis_result)
-            charts = self._trend_charts(inp.analysis_result)
             recommendations = list(inp.analysis_result.get("insights", []))
+
+        if inp.intent == "user_analysis":
+            charts = self._user_charts(inp.analysis_result)
+        elif inp.intent == "anomaly_detection":
+            charts = self._anomaly_charts(inp.analysis_result)
+        else:
+            charts = self._trend_charts(inp.analysis_result)
 
         warnings = list(inp.warnings)
         if inp.source == "mock":
