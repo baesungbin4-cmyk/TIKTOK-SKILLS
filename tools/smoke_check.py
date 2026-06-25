@@ -35,7 +35,14 @@ async def check_runtime_contract() -> None:
     skill_payload = await skills()
     skill_names = {item["name"] for item in skill_payload["skills"]}
     assert_true(
-        skill_names == {"tiktok_fetch", "trend_analysis", "user_analysis", "report_gen"},
+        skill_names
+        == {
+            "tiktok_fetch",
+            "anomaly_detection",
+            "trend_analysis",
+            "user_analysis",
+            "report_gen",
+        },
         f"unexpected skill registry: {sorted(skill_names)}",
     )
     fetch_schema = next(item for item in skill_payload["skills"] if item["name"] == "tiktok_fetch")
@@ -72,13 +79,31 @@ async def check_runtime_contract() -> None:
         target_type="hashtag",
         target_id="demo",
         provider="fixture",
-        date_range=(date(2026, 6, 19), date(2026, 6, 23)),
-        limit=5,
+        date_range=(date(2026, 6, 19), date(2026, 6, 24)),
+        limit=6,
     )
     assert_true(fixture_response.source == "fixture", "fixture provider was not used")
     assert_true(
-        fixture_response.result["summary"]["record_count"] == 5.0,
-        "fixture analysis should use five sample records",
+        fixture_response.result["summary"]["record_count"] == 6.0,
+        "fixture analysis should use six sample records",
+    )
+
+    anomaly_response = await agent.run(
+        "detect abnormal spike",
+        target_type="hashtag",
+        target_id="demo",
+        provider="fixture",
+        date_range=(date(2026, 6, 19), date(2026, 6, 24)),
+        limit=6,
+        anomaly_metric="views",
+    )
+    assert_true(
+        anomaly_response.intent == "anomaly_detection",
+        "anomaly query routed incorrectly",
+    )
+    assert_true(
+        anomaly_response.result["anomaly_count"] >= 1,
+        "fixture spike should be detected",
     )
 
 

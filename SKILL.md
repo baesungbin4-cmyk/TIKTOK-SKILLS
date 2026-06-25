@@ -9,7 +9,7 @@ Use this skill to work on the TikTok Data Analysis Agent in this repository.
 
 ## Project Map
 
-- `skills/`: Python skill modules and Pydantic input/output contracts.
+- `skills/`: Python skill modules and Pydantic input/output contracts, including trend, user, report, and anomaly detection skills.
 - `assets/sample_tiktok_records.json`: Local fixture dataset for repeatable analysis runs.
 - `agent/planner.py`: Orchestrates fetch, analysis, and report steps.
 - `api/main.py`: FastAPI app exposing `/healthz`, `/skills`, `/analyze`, and optional `/metrics`.
@@ -22,6 +22,7 @@ Use this skill to work on the TikTok Data Analysis Agent in this repository.
 - Preserve response fields that prevent misuse: `source`, `is_live_data`, `warnings`, and `trace_id`.
 - Keep each module contract typed with Pydantic models before wiring it into the planner or API.
 - Prefer adding new data providers behind the `tiktok_fetch` provider boundary instead of mixing provider-specific code into analysis modules.
+- For abnormal-spike requests, route through `anomaly_detection` and preserve the robust baseline, MAD, z-score, growth rate, severity, and reason fields.
 - Update `/skills` schema output when adding or changing a callable skill.
 - Avoid committing local secrets, `.env`, Docker CLI state, caches, or Baidu upload sidecar files.
 
@@ -51,6 +52,8 @@ For deployment changes, also run:
 ```bash
 GRAFANA_ADMIN_PASSWORD=dummy-password-for-config-check docker compose config
 ```
+
+For analytics changes, verify both normal trend analysis and anomaly detection against the fixture provider.
 
 ### Prepare For Live TikTok Data
 

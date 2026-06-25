@@ -9,6 +9,7 @@ This project is deliverable as a deployable local-data analysis agent. It does n
 Implemented skills:
 
 - `tiktok_fetch`: returns normalized deterministic mock records or local JSON fixture records.
+- `anomaly_detection`: detects abnormal spikes using median/MAD robust z-score and period-over-period growth thresholds.
 - `trend_analysis`: computes engagement, growth, series, and insights.
 - `user_analysis`: computes account health metrics and recommendations.
 - `report_gen`: creates an inline structured report and chart specs.
@@ -46,11 +47,26 @@ curl -X POST http://127.0.0.1:8000/analyze \
   -d '{"query":"trending hashtags","target_type":"hashtag","target_id":"demo","provider":"fixture","date_range":["2026-06-19","2026-06-23"],"limit":5}'
 ```
 
+Run anomaly detection against the same fixture dataset:
+
+```bash
+curl -X POST http://127.0.0.1:8000/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"query":"detect abnormal spike","target_type":"hashtag","target_id":"demo","provider":"fixture","date_range":["2026-06-19","2026-06-24"],"limit":6,"anomaly_metric":"views"}'
+```
+
 Provider behavior:
 
 - `mock`: generates deterministic records in code for fast smoke testing.
 - `fixture`: reads `assets/sample_tiktok_records.json`, filters by target/date, and supports cursor pagination.
 - `live`: not implemented; add authentication, provider contracts, rate limits, retry policy, and compliance checks before enabling it.
+
+Anomaly detection uses robust statistics instead of a simple average threshold:
+
+- baseline: median of the selected metric.
+- dispersion: median absolute deviation (MAD), scaled by `1.4826`.
+- detection reasons: robust z-score breach and/or period-over-period growth spike.
+- severity: medium/high/critical based on z-score and growth magnitude.
 
 ## Docker Deployment
 

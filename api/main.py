@@ -128,6 +128,10 @@ class AnalyzeRequest(BaseModel):
     date_range: tuple[date, date] | None = None
     limit: int = Field(default=50, ge=1, le=200)
     provider: ProviderName = "mock"
+    anomaly_metric: str = Field(
+        default="views",
+        pattern="^(views|engagement_count|engagement_rate)$",
+    )
 
 
 # ============================================================
@@ -169,4 +173,5 @@ async def analyze(request: AnalyzeRequest) -> AgentResponse:
         date_range=request.date_range,
         limit=request.limit,
         provider=request.provider,
+        anomaly_metric=request.anomaly_metric,
     )

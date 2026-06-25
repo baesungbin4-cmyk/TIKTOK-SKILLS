@@ -9,7 +9,7 @@ from pydantic import BaseModel, Field
 class ReportInput(BaseModel):
     analysis_id: str
     dataset_id: str
-    intent: Literal["trend_analysis", "user_analysis"]
+    intent: Literal["trend_analysis", "user_analysis", "anomaly_detection"]
     analysis_result: dict[str, Any]
     source: str
     is_live_data: bool
@@ -41,6 +41,10 @@ class ReportGenSkill:
             summary = self._user_summary(inp.analysis_result)
             charts = self._user_charts(inp.analysis_result)
             recommendations = list(inp.analysis_result.get("recommendations", []))
+        elif inp.intent == "anomaly_detection":
+            summary = self._anomaly_summary(inp.analysis_result)
+            charts = self._anomaly_charts(inp.analysis_result)
+            recommendations = self._anomaly_recommendations(inp.analysis_result)
         else:
             summary = self._trend_summary(inp.analysis_result)
             charts = self._trend_charts(inp.analysis_result)
@@ -110,4 +114,45 @@ class ReportGenSkill:
                     "engagement_rate": [profile.get("engagement_rate", 0)],
                 },
             }
+        ]
+
+    def _anomaly_summary(self, result: dict[str, Any]) -> str:
+        metric = result.get("metric", "views")
+        anomaly_count = result.get("anomaly_count", 0)
+        severity = result.get("severity", "normal")
+        baseline = result.get("baseline", 0)
+        return (
+            f"Anomaly detection found {anomaly_count} {metric} anomaly points. "
+            f"Overall severity is {severity}; robust baseline is {baseline:g}."
+        )
+
+    def _anomaly_charts(self, result: dict[str, Any]) -> list[dict[str, Any]]:
+        series = result.get("series", {})
+        return [
+            {
+                "type": "line",
+                "title": "Metric values over time",
+                "series": {
+                    "dates": series.get("dates", []),
+                    "values": series.get("values", []),
+                },
+            },
+            {
+                "type": "line",
+                "title": "Robust z-score over time",
+                "series": {
+                    "dates": series.get("dates", []),
+                    "robust_z_scores": series.get("robust_z_scores", []),
+                },
+            },
+        ]
+
+    def _anomaly_recommendations(self, result: dict[str, Any]) -> list[str]:
+        anomalies = result.get("anomalies", [])
+        if not anomalies:
+            return ["No abnormal metric spike was detected under the current thresholds."]
+        top = anomalies[0]
+        return [
+            f"Review content or traffic source around {top.get('collected_date')} for spike drivers.",
+            "Compare anomaly points with campaign calendar, paid traffic, and content format changes.",
         ]

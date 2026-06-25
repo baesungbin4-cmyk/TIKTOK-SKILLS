@@ -49,11 +49,22 @@
       "target_type": "hashtag",
       "target_id": "demo",
       "collected_date": "2026-06-23",
-      "views": 18150,
-      "likes": 1695,
-      "comments": 180,
-      "shares": 116,
+      "views": 43800,
+      "likes": 4620,
+      "comments": 520,
+      "shares": 410,
       "collected_at": "2026-06-23T08:00:00+00:00"
+    },
+    {
+      "id": "hashtag_demo_2026-06-24",
+      "target_type": "hashtag",
+      "target_id": "demo",
+      "collected_date": "2026-06-24",
+      "views": 19650,
+      "likes": 1780,
+      "comments": 190,
+      "shares": 118,
+      "collected_at": "2026-06-24T08:00:00+00:00"
     },
     {
       "id": "account_demo_2026-06-19",

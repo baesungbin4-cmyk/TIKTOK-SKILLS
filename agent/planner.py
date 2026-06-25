@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
+from skills.anomaly_detection import AnomalyDetectionInput, AnomalyDetectionSkill
 from skills.report_gen import ReportGenSkill, ReportInput
 from skills.tiktok_fetch import FetchInput, ProviderName, TikTokFetchSkill
 from skills.trend_analysis import TrendAnalysisInput, TrendAnalysisSkill
@@ -18,6 +19,10 @@ class AgentRequest(BaseModel):
     date_range: tuple[date, date] | None = None
     limit: int = Field(default=50, ge=1, le=200)
     provider: ProviderName = "mock"
+    anomaly_metric: str = Field(
+        default="views",
+        pattern="^(views|engagement_count|engagement_rate)$",
+    )
 
 
 class AgentResponse(BaseModel):
@@ -35,11 +40,13 @@ class AgentResponse(BaseModel):
 class TikTokAgent:
     def __init__(self) -> None:
         self.fetch_skill = TikTokFetchSkill()
+        self.anomaly_skill = AnomalyDetectionSkill()
         self.trend_skill = TrendAnalysisSkill()
         self.user_skill = UserAnalysisSkill()
         self.report_skill = ReportGenSkill()
         self.skills = {
             self.fetch_skill.name: self.fetch_skill,
+            self.anomaly_skill.name: self.anomaly_skill,
             self.trend_skill.name: self.trend_skill,
             self.user_skill.name: self.user_skill,
             self.report_skill.name: self.report_skill,
@@ -65,6 +72,14 @@ class TikTokAgent:
                 UserAnalysisInput(
                     dataset_id=fetch_result.dataset_id,
                     records=fetch_result.records,
+                )
+            )
+        elif intent == "anomaly_detection":
+            analysis = await self.anomaly_skill.run(
+                AnomalyDetectionInput(
+                    dataset_id=fetch_result.dataset_id,
+                    records=fetch_result.records,
+                    metric=request.anomaly_metric,
                 )
             )
         else:
@@ -109,6 +124,20 @@ class TikTokAgent:
             return "user_analysis"
 
         lowered = request.query.lower()
+        anomaly_keywords = (
+            "anomaly",
+            "outlier",
+            "spike",
+            "surge",
+            "abnormal",
+            "异常",
+            "峰值",
+            "突增",
+            "波动",
+        )
+        if any(keyword in lowered for keyword in anomaly_keywords):
+            return "anomaly_detection"
+
         user_keywords = (
             "user",
             "account",
@@ -131,6 +160,11 @@ class TikTokAgent:
     def tool_schemas(self) -> list[dict[str, Any]]:
         return [
             self._schema_for(self.fetch_skill.name, self.fetch_skill.description, FetchInput),
+            self._schema_for(
+                self.anomaly_skill.name,
+                self.anomaly_skill.description,
+                AnomalyDetectionInput,
+            ),
             self._schema_for(
                 self.trend_skill.name,
                 self.trend_skill.description,

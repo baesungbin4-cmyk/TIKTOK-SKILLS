@@ -5,6 +5,7 @@ import unittest
 
 from agent.planner import TikTokAgent
 from api.main import healthz, skills
+from skills.anomaly_detection import AnomalyDetectionInput, AnomalyDetectionSkill
 from skills.tiktok_fetch import FetchInput, TikTokFetchSkill
 
 
@@ -24,7 +25,13 @@ class AgentDeliveryTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(
             names,
-            {"tiktok_fetch", "trend_analysis", "user_analysis", "report_gen"},
+            {
+                "tiktok_fetch",
+                "anomaly_detection",
+                "trend_analysis",
+                "user_analysis",
+                "report_gen",
+            },
         )
         for item in payload["skills"]:
             self.assertIn("description", item)
@@ -94,14 +101,54 @@ class AgentDeliveryTest(unittest.IsolatedAsyncioTestCase):
             target_type="hashtag",
             target_id="demo",
             provider="fixture",
-            date_range=(date(2026, 6, 19), date(2026, 6, 23)),
-            limit=5,
+            date_range=(date(2026, 6, 19), date(2026, 6, 24)),
+            limit=6,
         )
 
         self.assertEqual(response.source, "fixture")
         self.assertFalse(response.is_live_data)
-        self.assertEqual(response.result["summary"]["record_count"], 5.0)
+        self.assertEqual(response.result["summary"]["record_count"], 6.0)
         self.assertGreater(response.result["summary"]["growth"], 0)
+
+    async def test_anomaly_skill_detects_fixture_spike(self) -> None:
+        fetch = await TikTokFetchSkill().run(
+            FetchInput(
+                target_type="hashtag",
+                target_id="demo",
+                provider="fixture",
+                date_range=(date(2026, 6, 19), date(2026, 6, 24)),
+                limit=6,
+            )
+        )
+        result = await AnomalyDetectionSkill().run(
+            AnomalyDetectionInput(
+                dataset_id=fetch.dataset_id,
+                records=fetch.records,
+                metric="views",
+                growth_threshold=0.35,
+            )
+        )
+
+        self.assertEqual(result.metric, "views")
+        self.assertGreaterEqual(result.anomaly_count, 1)
+        self.assertIn("hashtag_demo_2026-06-23", {item.record_id for item in result.anomalies})
+
+    async def test_agent_routes_anomaly_queries_to_anomaly_detection(self) -> None:
+        response = await TikTokAgent().run(
+            "detect abnormal spike",
+            target_type="hashtag",
+            target_id="demo",
+            provider="fixture",
+            date_range=(date(2026, 6, 19), date(2026, 6, 24)),
+            limit=6,
+            anomaly_metric="views",
+        )
+
+        self.assertEqual(response.intent, "anomaly_detection")
+        self.assertEqual(response.steps, ["tiktok_fetch", "anomaly_detection", "report_gen"])
+        self.assertEqual(response.result["severity"], "critical")
+        self.assertGreaterEqual(response.result["anomaly_count"], 1)
+        self.assertIn("Anomaly detection found", response.report["summary"])
 
 
 if __name__ == "__main__":
