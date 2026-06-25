@@ -1,0 +1,184 @@
+# ============================================================
+# TikTok Data Analysis Agent — Production Stack
+# ============================================================
+# Services:
+#   nginx        — Reverse proxy, rate limiting, security headers
+#   app          — FastAPI application (TikTok agent)
+#   prometheus   — Metrics collection & alerting
+#   grafana      — Metrics dashboards & visualization
+# ============================================================
+
+services:
+  # ============================================================
+  # FastAPI Application
+  # ============================================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tiktok-agent
+    restart: unless-stopped
+    environment:
+      PYTHONUNBUFFERED: "1"
+      LOG_LEVEL: "info"
+      ENABLE_METRICS: "true"
+    expose:
+      - "8000"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+        labels: "service=tiktok-agent"
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 512M
+        reservations:
+          cpus: "0.25"
+          memory: 128M
+
+  # ============================================================
+  # Nginx Reverse Proxy
+  # ============================================================
+  nginx:
+    build:
+      context: ./docker/nginx
+      dockerfile: Dockerfile
+    image: tiktok-nginx-local
+    container_name: tiktok-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+        labels: "service=nginx"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+  # ============================================================
+  # Prometheus — Metrics collection
+  # ============================================================
+  prometheus:
+    build:
+      context: ./docker/prometheus
+      dockerfile: Dockerfile
+    image: tiktok-prometheus-local
+    container_name: tiktok-prometheus
+    restart: unless-stopped
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=15d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+    volumes:
+      - prometheus_data:/prometheus
+    expose:
+      - "9090"
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "--tries=1", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+
+  # ============================================================
+  # Grafana — Dashboards & visualization
+  # ============================================================
+  grafana:
+    build:
+      context: ./docker/grafana
+      dockerfile: Dockerfile
+    image: tiktok-grafana-local
+    container_name: tiktok-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_INSTALL_PLUGINS: ""
+      GF_SERVER_ROOT_URL: ${GRAFANA_ROOT_URL:-http://localhost:3000}
+      GF_SERVER_SERVE_FROM_SUB_PATH: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks:
+      - backend
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "--tries=1", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "3"
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512M
+
+# ============================================================
+# Networks
+# ============================================================
+networks:
+  backend:
+    driver: bridge
+    name: tiktok_backend
+
+# ============================================================
+# Volumes (persistent data)
+# ============================================================
+volumes:
+  prometheus_data:
+    name: tiktok_prometheus_data
+  grafana_data:
+    name: tiktok_grafana_data
